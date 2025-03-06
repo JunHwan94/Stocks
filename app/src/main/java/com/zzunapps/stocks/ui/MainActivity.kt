@@ -1,4 +1,4 @@
-package com.zzunapps.stocks
+package com.zzunapps.stocks.ui
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

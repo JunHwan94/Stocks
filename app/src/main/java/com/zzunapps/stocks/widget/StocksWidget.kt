@@ -21,7 +21,8 @@ import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.size
 import androidx.glance.text.Text
 import com.zzunapps.stocks.R
-import com.zzunapps.stocks.viewmodel.StockViewModel
+import com.zzunapps.stocks.data.StockItem
+import com.zzunapps.stocks.ui.StockViewModel
 
 class StocksWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
@@ -36,7 +37,7 @@ class StocksWidget : GlanceAppWidget() {
 @Composable
 @GlanceComposable
 fun Widget() {
-    val list = listOf(StockViewModel("AAPL", 100.0), StockViewModel("GOOG", 200.0))
+    val list = listOf(StockItem("AAPL", 100.0), StockItem("GOOG", 200.0))
     Scaffold(
         titleBar = {
             TitleBar(
@@ -49,9 +50,9 @@ fun Widget() {
         LazyColumn {
             items(list) {
                 Row {
-                    Text(it.stockName.value ?: "")
+                    Text(it.stockName)
                     Spacer(modifier = GlanceModifier.size(10.dp))
-                    Text(it.price.value.toString())
+                    Text(it.price.toString())
                 }
             }
         }
