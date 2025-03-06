@@ -64,4 +64,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.savedstate)
+
+    // Retrofit2
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.gson)
 }
