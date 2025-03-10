@@ -1,8 +1,9 @@
-package com.zzunapps.stocks.widget
+package com.zzunapps.stocks.ui.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
@@ -42,7 +43,11 @@ class StocksWidget : GlanceAppWidget() {
 @GlanceComposable
 fun Widget() {
     val stockViewModel = StockViewModel()
-    val list by remember { mutableStateOf<List<StockItem>>(stockViewModel.allStocks.value!!) }
+    val list = remember { mutableStateListOf<StockItem>() }
+    stockViewModel.allStocks.observeForever {
+        list.clear()
+        list.addAll(it)
+    }
     Scaffold(
         titleBar = {
             TitleBar(

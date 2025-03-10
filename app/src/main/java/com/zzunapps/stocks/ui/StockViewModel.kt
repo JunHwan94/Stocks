@@ -12,15 +12,14 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 class StockViewModel : ViewModel() {
+    val TAG = "StockViewModel"
     val allStocks = MutableLiveData<List<StockItem>>()
 
     init {
-        val retrofit = Retrofit.Builder().baseUrl("https://www.alphavantage.co/").addConverterFactory(
-            GsonConverterFactory.create()).build()
+        val retrofit = Retrofit.Builder().baseUrl("https://www.alphavantage.co/").addConverterFactory(GsonConverterFactory.create()).build()
         val service = retrofit.create(AlphavantageService::class.java)
 
         allStocks.value = mutableListOf<StockItem>()
-        (allStocks.value as MutableList<StockItem>).add(StockItem("AAPL", 100.0))
         service.getStockData(
             mapOf(
                 "function" to "TIME_SERIES_INTRADAY",
@@ -30,16 +29,20 @@ class StockViewModel : ViewModel() {
             )
         ).enqueue(object : retrofit2.Callback<AlpavResponse> {
             override fun onResponse(call: Call<AlpavResponse>, response: Response<AlpavResponse>) {
-                val alphavObject = response.body()!!
-                Log.d("api response", "${response.raw()}")
-                Log.d("metaData", "${alphavObject.metaData}")
-                Log.d("timeSeries", "${alphavObject.timeSeries}")
-                val stockItem = StockItem(alphavObject.metaData.symbol, alphavObject.timeSeries.values.first().close)
-                (allStocks.value as MutableList<StockItem>).add(stockItem)
+                if(response.isSuccessful) {
+                    val alphavObject = response.body()!!
+                    Log.d(TAG, "${response.body()}")
+                    val stockItem = StockItem(
+                        alphavObject.metaData.symbol,
+                        alphavObject.timeSeries.values.first().close
+                    )
+                    Log.d(TAG, "${stockItem.stockName} ${stockItem.price}")
+                    (allStocks.value as MutableList<StockItem>).add(stockItem)
+                }
             }
 
             override fun onFailure(call: Call<AlpavResponse>, t: Throwable) {
-
+                Log.d("error", "${t.message}")
             }
         })
     }

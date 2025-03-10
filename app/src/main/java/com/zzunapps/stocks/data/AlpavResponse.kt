@@ -1,18 +1,18 @@
 package com.zzunapps.stocks.data
 
-import retrofit2.http.Field
+import com.google.gson.annotations.SerializedName
 
 data class AlpavResponse(
-    @Field("Meta Data") val metaData: MetaData,
-    @Field("Time Series (1min)") val timeSeries: Map<String, PriceInfo>
+    @SerializedName("Meta Data") val metaData: MetaData,
+    @SerializedName("Time Series (1min)") val timeSeries: Map<String, PriceInfo>
 )
 
 data class MetaData(
-    @Field("2: Symbol") val symbol: String,
-    @Field("3: Last Refreshed") val lastRefreshed: String,
-    @Field("4: Interval") val interval: String
+    @SerializedName("2. Symbol") val symbol: String,
+    @SerializedName("3. Last Refreshed") val lastRefreshed: String,
+    @SerializedName("4. Interval") val interval: String,
 )
 
 data class PriceInfo(
-    @Field("4. close") val close: Double
+    @SerializedName("4. close") val close: Double,
 )
