@@ -17,6 +17,7 @@ import com.zzunapps.stocks.ui.theme.StocksTheme
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // todo : 앱 최초 실행 시 액세스 토큰 발급 및 저장
         enableEdgeToEdge()
         setContent {
             StocksTheme {
