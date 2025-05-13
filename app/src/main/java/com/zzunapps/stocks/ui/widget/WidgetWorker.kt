@@ -1,9 +1,11 @@
-package com.zzunapps.stocks.ui
+package com.zzunapps.stocks.ui.widget
 
+import android.annotation.SuppressLint
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
+import androidx.work.CoroutineWorker
+import androidx.work.Data
+import androidx.work.WorkerParameters
 import com.zzunapps.stocks.BuildConfig
 import com.zzunapps.stocks.data.AccessTokenRequestBody
 import com.zzunapps.stocks.data.AccessTokenResponseBody
@@ -11,35 +13,41 @@ import com.zzunapps.stocks.data.PriceDetail
 import com.zzunapps.stocks.data.StockItem
 import com.zzunapps.stocks.network.KISService
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import retrofit2.Retrofit
 import retrofit2.await
 import retrofit2.converter.gson.GsonConverterFactory
 
-class StockViewModel : ViewModel() {
-    val TAG = "StockViewModel"
+class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params){
     val allStocks = MutableLiveData<List<StockItem>>()
 
-    private val retrofit = Retrofit.Builder().baseUrl("https://openapi.koreainvestment.com:9443/").addConverterFactory(GsonConverterFactory.create()).build()
+    private val retrofit = Retrofit.Builder().baseUrl("https://openapi.koreainvestment.com:9443/")
+        .addConverterFactory(GsonConverterFactory.create()).build()
     private val service = retrofit.create(KISService::class.java)
 
-    init {
-        allStocks.value = mutableListOf<StockItem>()
+    @SuppressLint("RestrictedApi")
+    override suspend fun doWork(): Result  = withContext(Dispatchers.IO) {
+        try {
+            // todo : 토큰은 SharedPreferences 에 저장
+            //  토큰 기간 만료되었으면 재발급
+            val accessToken = getAccessToken().accessToken
 
-        GlobalScope.launch {
-            val priceDetail = getPriceDetail(
-                accessToken = "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzUxMiJ9.eyJzdWIiOiJ0b2tlbiIsImF1ZCI6IjQ0Y2RjMGM2LWIxMmMtNDE3MS1iODE1LWM2NzgzMmE2YmYyMyIsInByZHRfY2QiOiIiLCJpc3MiOiJ1bm9ndyIsImV4cCI6MTc0MjM5MjI4OCwiaWF0IjoxNzQyMzA1ODg4LCJqdGkiOiJQU1dQN0EwaUR1dFoxWlR4eUtLS1RucGsyaUxMTVlVam9nVXAifQ.KaL8Qu2oZB2DBbecExQ-1d8j9fGZtO70fl00PPniMvm8rJycYXcrsMooL_0NzZkz2XHPVuLyKj1a1RZeRkGcmA",
-                excd = "NAS",
-                symb = "TRMD"
-            )
-            (allStocks.value as MutableList<StockItem>).add(StockItem(priceDetail.rsym.takeLast(4), priceDetail.last.toDouble()))
+            // todo : DB에 저장된 목록 불러와서 종목별 요청 후,
+            //  리스트에 담아서 반환?
+            //  이렇게 하지 말고 리스트는 위젯클래스에서 가지고, 주식 api 요청 하나당 한번의 worker 수행?, retrofit 객체는 클래스로 따로 빼서 관리
+            getPriceDetail(accessToken, "NAS","TRMD")
+
+            val resultData = Data.Builder()
+                .put("result", allStocks)
+                .build()
+
+            Result.success(resultData)
+        } catch(e: Exception) {
+            Result.failure()
         }
     }
 
-    suspend fun getAccessToken() : AccessTokenResponseBody {
+    private suspend fun getAccessToken() : AccessTokenResponseBody {
         return withContext(Dispatchers.IO) {
             service.getAccessToken(
                 AccessTokenRequestBody()
@@ -47,7 +55,7 @@ class StockViewModel : ViewModel() {
         }
     }
 
-    suspend fun getPriceDetail(
+    private suspend fun getPriceDetail(
         accessToken: String,
         excd: String = "NAS",
         symb: String = "AAPL"
@@ -55,10 +63,10 @@ class StockViewModel : ViewModel() {
         return withContext(Dispatchers.IO) {
             service.getStockData(
                 mapOf(
-                    "content-type" to "application/json; charset=utf-8",
-                    "authorization" to accessToken,
-                    "appkey" to BuildConfig.APP_KEY,
-                    "appsecret" to BuildConfig.APP_SECRET,
+                    CONTENT_TYPE_KV,
+                    AUTHORIZATION to accessToken,
+                    APP_KEY_KV,
+                    APP_SECRET_KV,
                     "tr_id" to "HHDFS76200200"
                 ),
                 mapOf(
@@ -70,7 +78,7 @@ class StockViewModel : ViewModel() {
         }
     }
 
-    companion object {
+    private companion object {
         private const val AUTHORIZATION = "authorization"
         private val CONTENT_TYPE_KV = "content-type" to "application/json; charset=utf-8"
         private val APP_KEY_KV = "appkey" to BuildConfig.APP_KEY
