@@ -46,14 +46,21 @@ class StocksWidget : GlanceAppWidget() {
 @Composable
 @GlanceComposable
 fun Widget() {
+    val list = remember { mutableStateListOf<StockItem>() }
+
     val data = Data.Builder()
-        .put("data", "data") // todo : API 별로 worker 나눠서?
+        .put("data", "data") // todo : API 별로 worker 나눠서
         .build()
 
     val workRequest = OneTimeWorkRequestBuilder<WidgetWorker>().setInputData(data).build()
-    WorkManager.getInstance(LocalContext.current).enqueue(workRequest)
+    val workManager = WorkManager.getInstance(LocalContext.current)
+    workManager.enqueue(workRequest).result
 
-    val list = remember { mutableStateListOf<StockItem>() }
+    val resultData = workManager.getWorkInfoByIdLiveData(workRequest.id).value?.outputData
+
+    // todo : WidgetWorker에서 결과 받으면 리스트 업데이트
+    list.add(StockItem("AAPL", 100.0))
+    list.add(StockItem(resultData?.getString("symbol")!!, resultData.getString("price")?.toDouble()!!))
 
     Scaffold(
         titleBar = {
