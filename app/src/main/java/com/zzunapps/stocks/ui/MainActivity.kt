@@ -1,10 +1,7 @@
 package com.zzunapps.stocks.ui
 
-import android.content.Context
-import android.content.Context.MODE_PRIVATE
-import android.icu.util.Calendar
 import android.os.Bundle
-import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -16,13 +13,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
-import com.zzunapps.stocks.network.RetrofitClient
+import com.zzunapps.stocks.network.NetworkStatus
+import com.zzunapps.stocks.network.checkAndUpdateAccessToken
 import com.zzunapps.stocks.ui.theme.StocksTheme
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val tokenPrefs by lazy { applicationContext.getSharedPreferences("token", MODE_PRIVATE) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -36,23 +35,14 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
-        // 앱 최초 실행 시 액세스 토큰 발급 및 저장
-        lifecycleScope.launch(Dispatchers.IO) {
-            checkAndUpdateAccessToken(applicationContext)
-        }
-    }
-}
-
-suspend fun checkAndUpdateAccessToken(context: Context) {
-    val savedAccessToken = context.getSharedPreferences("token", MODE_PRIVATE).getString("accessToken", "")
-    val tokenIssuedAt = context.getSharedPreferences("token", MODE_PRIVATE).getLong("tokenIssuedAt", 0)
-    val tokenHasNotExpired = Calendar.getInstance().timeInMillis - tokenIssuedAt < 86400000
-
-    if(savedAccessToken == "" || !tokenHasNotExpired) {
-        RetrofitClient.requestAccessToken {
-            context.getSharedPreferences("token", MODE_PRIVATE).edit().putString("accessToken", it.accessToken).apply()
-            context.getSharedPreferences("token", MODE_PRIVATE).edit().putLong("tokenIssuedAt", Calendar.getInstance().timeInMillis).apply()
-            Log.d("MainActivity", "accessToken: ${it.accessToken}")
+        val connectivity = NetworkStatus.getConnectivityStatus(applicationContext)
+        if(connectivity == NetworkStatus.TYPE_NOT_CONNECTED) {
+            Toast.makeText(applicationContext, "네트워크 연결을 확인해주세요.", Toast.LENGTH_SHORT).show()
+        } else {
+            // 앱 최초 실행 시 액세스 토큰 발급 및 저장
+            lifecycleScope.launch(Dispatchers.IO) {
+                checkAndUpdateAccessToken(tokenPrefs)
+            }
         }
     }
 }

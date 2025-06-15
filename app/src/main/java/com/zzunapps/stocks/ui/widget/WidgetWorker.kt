@@ -1,49 +1,63 @@
 package com.zzunapps.stocks.ui.widget
 
 import android.annotation.SuppressLint
+import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.util.Log
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.work.CoroutineWorker
-import androidx.work.Data
 import androidx.work.WorkerParameters
 import com.zzunapps.stocks.BuildConfig
 import com.zzunapps.stocks.data.Constants.AUTHORIZATION
 import com.zzunapps.stocks.data.Constants.TR_ID
 import com.zzunapps.stocks.data.OverseasPriceResponse
 import com.zzunapps.stocks.network.RetrofitClient
-import com.zzunapps.stocks.ui.checkAndUpdateAccessToken
+import com.zzunapps.stocks.network.checkAndUpdateAccessToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params){
+    val tokenPrefs = applicationContext.getSharedPreferences("token", Context.MODE_PRIVATE)
 
     @SuppressLint("RestrictedApi")
-    override suspend fun doWork(): Result  = withContext(Dispatchers.IO) {
-        checkAndUpdateAccessToken(applicationContext)
+    override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
+        val appWidgetId = inputData.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+        if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
+            Log.e("WidgetWorker", "Invalid appWidgetId received.")
+            return@withContext Result.failure()
+        }
+
+        val glanceId = GlanceAppWidgetManager(applicationContext).getGlanceIdBy(appWidgetId)
+        if (glanceId == null) {
+            Log.e("WidgetWorker", "Could not get GlanceId for appWidgetId: $appWidgetId")
+            return@withContext Result.failure()
+        }
+
+        checkAndUpdateAccessToken(tokenPrefs)
         try {
             val accessToken = applicationContext.getSharedPreferences("token", Context.MODE_PRIVATE).getString("accessToken", "") ?: ""
-            Log.d("WidgetWorker", "accessToken: $accessToken")
 
-            var symbol = ""
-            var price = 0.0
-            // todo : SharedPreferences 에 저장된 목록 불러와서 종목별 요청
+            // todo : 종목별 요청
             requestOverseasPrice(accessToken, "NAS","TRMD") {
-                symbol = it.priceDetail.rsym
-                price = it.priceDetail.last.toDouble()
+                val symbol = it.priceDetail.rsym
+                val price = it.priceDetail.last
+
+                Log.d("WidgetWorker", "symbol: $symbol, price: $price")
+
+                updateAppWidgetState(applicationContext, PreferencesGlanceStateDefinition, glanceId) { prefs ->
+                    prefs.toMutablePreferences().apply {
+                        this[stringPreferencesKey("symbol")] = symbol
+                        this[stringPreferencesKey("price")] = price
+                    }
+                }
             }
 
-            Log.d("WidgetWorker", "symbol: $symbol, price: $price")
+            Log.d("MyWidgetWorker", "Widget state updated successfully for GlanceId: $glanceId")
 
-            val resultData = Data.Builder()
-                .putAll(
-                    mutableMapOf<String, Any>(
-                        "symbol" to symbol,
-                        "price" to price
-                    )
-                )
-                .build()
-
-            Result.success(resultData)
+            Result.success()
         } catch(e: Exception) {
             Log.d("WidgetWorker", "Error fetching data: ${e.stackTrace}")
             Result.failure()
@@ -54,7 +68,7 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         accessToken: String,
         excd: String = "NAS",
         symb: String = "AAPL",
-        processResponseBody: (OverseasPriceResponse) -> Unit
+        processResponseBody: suspend (OverseasPriceResponse) -> Unit
     ) {
         withContext(Dispatchers.IO) {
             val response = RetrofitClient.service.getStockData(
