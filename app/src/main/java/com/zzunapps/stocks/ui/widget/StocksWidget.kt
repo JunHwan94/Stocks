@@ -3,7 +3,6 @@ package com.zzunapps.stocks.ui.widget
 import android.annotation.SuppressLint
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -25,11 +24,16 @@ import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
 import androidx.glance.layout.size
+import androidx.glance.layout.width
 import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.zzunapps.stocks.R
+import com.zzunapps.stocks.data.Constants.STOCK_ITEMS_JSON_KEY
+import com.zzunapps.stocks.data.Data
 import com.zzunapps.stocks.data.StockItem
 
 class StocksWidget : GlanceAppWidget() {
@@ -39,7 +43,7 @@ class StocksWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         provideContent {
             GlanceTheme {
-                Widget()
+                WidgetContent()
             }
         }
     }
@@ -48,14 +52,18 @@ class StocksWidget : GlanceAppWidget() {
 @SuppressLint("RestrictedApi")
 @Composable
 @GlanceComposable
-fun Widget() {
+fun WidgetContent() {
     val prefs = currentState<Preferences>()
 
-    val list = remember { mutableStateListOf<StockItem>() }
-
-    // todo : WidgetWorker에서 결과 받으면 리스트 업데이트
-    list.add(StockItem("AAPL", "100.0"))
-    list.add(StockItem(prefs[stringPreferencesKey("symbol")] ?: "AAAA", prefs[stringPreferencesKey("price")] ?: "0.0"))
+    val stockItemsJson = prefs[stringPreferencesKey(STOCK_ITEMS_JSON_KEY)]
+    val stockItems: List<StockItem> = remember(stockItemsJson) { // stockListJson이 변경될 때 변경됨
+        try {
+            val type = object : TypeToken<List<StockItem>>(){}.type
+            Gson().fromJson(stockItemsJson, type)
+        } catch(e: Exception) {
+            emptyList()
+        }
+    } ?: emptyList()
 
     Scaffold(
         titleBar = {
@@ -69,7 +77,7 @@ fun Widget() {
         backgroundColor = GlanceTheme.colors.widgetBackground
     ) {
         LazyColumn {
-            items(list) {
+            items(stockItems) {
                 StockItemContent(it)
             }
         }
@@ -80,12 +88,13 @@ fun Widget() {
 fun StockItemContent(item: StockItem) {
     Row {
         Text(
+            modifier = GlanceModifier.width(40.dp),
             text = item.stockName,
             style = TextStyle(color = GlanceTheme.colors.onSurface)
         )
         Spacer(modifier = GlanceModifier.size(10.dp))
         Text(
-            text = item.price,
+            text = "$${item.price}",
             style = TextStyle(color = GlanceTheme.colors.onSurface)
         )
     }
@@ -96,6 +105,6 @@ fun StockItemContent(item: StockItem) {
 @GlanceComposable
 fun WidgetPreview(){
     GlanceTheme {
-        Widget()
+        WidgetContent()
     }
 }

@@ -7,13 +7,17 @@ import android.util.Log
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.state.updateAppWidgetState
+import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.google.gson.Gson
 import com.zzunapps.stocks.BuildConfig
 import com.zzunapps.stocks.data.Constants.AUTHORIZATION
+import com.zzunapps.stocks.data.Constants.STOCK_ITEMS_JSON_KEY
 import com.zzunapps.stocks.data.Constants.TR_ID
-import com.zzunapps.stocks.data.OverseasPriceResponse
+import com.zzunapps.stocks.data.Data
+import com.zzunapps.stocks.data.StockItem
 import com.zzunapps.stocks.network.RetrofitClient
 import com.zzunapps.stocks.network.checkAndUpdateAccessToken
 import kotlinx.coroutines.Dispatchers
@@ -41,19 +45,23 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             val accessToken = applicationContext.getSharedPreferences("token", Context.MODE_PRIVATE).getString("accessToken", "") ?: ""
 
             // todo : 종목별 요청
-            requestOverseasPrice(accessToken, "NAS","TRMD") {
-                val symbol = it.priceDetail.rsym
-                val price = it.priceDetail.last
 
-                Log.d("WidgetWorker", "symbol: $symbol, price: $price")
+            val stockItems = requestOverseasPrice(accessToken)
+            val stockItemsJson = Gson().toJson(stockItems)
 
-                updateAppWidgetState(applicationContext, PreferencesGlanceStateDefinition, glanceId) { prefs ->
-                    prefs.toMutablePreferences().apply {
-                        this[stringPreferencesKey("symbol")] = symbol
-                        this[stringPreferencesKey("price")] = price
-                    }
+            updateAppWidgetState(
+                applicationContext,
+                PreferencesGlanceStateDefinition,
+                glanceId
+            ) { prefs ->
+                prefs.toMutablePreferences().apply {
+                    this[stringPreferencesKey(STOCK_ITEMS_JSON_KEY)] = stockItemsJson
+//                    this[stringPreferencesKey("s${pair.second}")] = symbol
+//                    this[stringPreferencesKey("p${pair.second}")] = price
                 }
             }
+
+            StocksWidget().updateAll(applicationContext)
 
             Log.d("MyWidgetWorker", "Widget state updated successfully for GlanceId: $glanceId")
 
@@ -65,32 +73,35 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     }
 
     private suspend fun requestOverseasPrice(
-        accessToken: String,
-        excd: String = "NAS",
-        symb: String = "AAPL",
-        processResponseBody: suspend (OverseasPriceResponse) -> Unit
-    ) {
-        withContext(Dispatchers.IO) {
-            val response = RetrofitClient.service.getStockData(
-                mapOf(
-                    CONTENT_TYPE_KV,
-                    AUTHORIZATION to "Bearer $accessToken",
-                    APP_KEY_KV,
-                    APP_SECRET_KV,
-                    TR_ID to "HHDFS76200200"
-                ),
-                mapOf(
-                    "AUTH" to "", // 빈 값으로 보내야 함
-                    "EXCD" to excd, // 거래소 코드 NAS, NYS...
-                    "SYMB" to symb, // 종목 코드 AAPL, TRMD
+        accessToken: String
+    ): List<StockItem> {
+        return withContext(Dispatchers.IO) {
+            Data.stocks.map { pair ->
+                val response = RetrofitClient.service.getStockData(
+                    mapOf(
+                        CONTENT_TYPE_KV,
+                        AUTHORIZATION to "Bearer $accessToken",
+                        APP_KEY_KV,
+                        APP_SECRET_KV,
+                        TR_ID to "HHDFS76200200"
+                    ),
+                    mapOf(
+                        "AUTH" to "", // 빈 값으로 보내야 함
+                        "EXCD" to pair.first, // 거래소 코드 NAS, NYS...
+                        "SYMB" to pair.second, // 종목 코드 AAPL, TRMD
+                    )
                 )
-            )
-            if(response.isSuccessful) {
-                val body = response.body() ?: throw Exception("Empty response body")
-                processResponseBody(body)
-            } else {
-                response.errorBody()
-                throw Exception("Error getting overseas price : ${response.code()}")
+                if (response.isSuccessful) {
+                    val body = response.body() ?: throw Exception("Empty response body")
+                    val symbol = body.priceDetail.rsym
+                    val price = body.priceDetail.last
+                    Log.d("WidgetWorker", "symbol: $symbol, price: $price")
+                    StockItem(symbol.drop(4), price.dropLast(2))
+                } else {
+                    response.errorBody()
+                    StockItem("", "")
+                    throw Exception("Error getting overseas price : ${response.code()}")
+                }
             }
         }
     }
