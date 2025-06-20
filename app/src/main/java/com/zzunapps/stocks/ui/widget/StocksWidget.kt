@@ -29,12 +29,10 @@ import androidx.glance.state.GlanceStateDefinition
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.zzunapps.stocks.R
 import com.zzunapps.stocks.data.Constants.STOCK_ITEMS_JSON_KEY
-import com.zzunapps.stocks.data.Data
 import com.zzunapps.stocks.data.StockItem
+import kotlinx.serialization.json.Json
 
 class StocksWidget : GlanceAppWidget() {
     // 위젯의 상태 정의를 지정합니다.
@@ -55,11 +53,10 @@ class StocksWidget : GlanceAppWidget() {
 fun WidgetContent() {
     val prefs = currentState<Preferences>()
 
-    val stockItemsJson = prefs[stringPreferencesKey(STOCK_ITEMS_JSON_KEY)]
+    val stockItemsJson = prefs[stringPreferencesKey(STOCK_ITEMS_JSON_KEY)] ?: "[]"
     val stockItems: List<StockItem> = remember(stockItemsJson) { // stockListJson이 변경될 때 변경됨
         try {
-            val type = object : TypeToken<List<StockItem>>(){}.type
-            Gson().fromJson(stockItemsJson, type)
+            Json.decodeFromString<List<StockItem>>(stockItemsJson)
         } catch(e: Exception) {
             emptyList()
         }
@@ -94,7 +91,7 @@ fun StockItemContent(item: StockItem) {
         )
         Spacer(modifier = GlanceModifier.size(10.dp))
         Text(
-            text = "$${item.price}",
+            text = "$ ${item.price}",
             style = TextStyle(color = GlanceTheme.colors.onSurface)
         )
     }

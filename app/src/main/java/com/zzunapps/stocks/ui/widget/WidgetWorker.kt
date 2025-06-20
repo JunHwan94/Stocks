@@ -11,7 +11,6 @@ import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.google.gson.Gson
 import com.zzunapps.stocks.BuildConfig
 import com.zzunapps.stocks.data.Constants.AUTHORIZATION
 import com.zzunapps.stocks.data.Constants.STOCK_ITEMS_JSON_KEY
@@ -22,9 +21,10 @@ import com.zzunapps.stocks.network.RetrofitClient
 import com.zzunapps.stocks.network.checkAndUpdateAccessToken
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params){
-    val tokenPrefs = applicationContext.getSharedPreferences("token", Context.MODE_PRIVATE)
+    private val tokenPrefs = applicationContext.getSharedPreferences("token", Context.MODE_PRIVATE)
 
     @SuppressLint("RestrictedApi")
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
@@ -45,9 +45,8 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             val accessToken = applicationContext.getSharedPreferences("token", Context.MODE_PRIVATE).getString("accessToken", "") ?: ""
 
             // todo : 종목별 요청
-
             val stockItems = requestOverseasPrice(accessToken)
-            val stockItemsJson = Gson().toJson(stockItems)
+            val stockItemsJson = Json.encodeToString(stockItems)
 
             updateAppWidgetState(
                 applicationContext,
@@ -56,8 +55,6 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             ) { prefs ->
                 prefs.toMutablePreferences().apply {
                     this[stringPreferencesKey(STOCK_ITEMS_JSON_KEY)] = stockItemsJson
-//                    this[stringPreferencesKey("s${pair.second}")] = symbol
-//                    this[stringPreferencesKey("p${pair.second}")] = price
                 }
             }
 
@@ -67,7 +64,7 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
 
             Result.success()
         } catch(e: Exception) {
-            Log.d("WidgetWorker", "Error fetching data: ${e.stackTrace}")
+            Log.d("WidgetWorker", "Error fetching data: ${e.message}")
             Result.failure()
         }
     }

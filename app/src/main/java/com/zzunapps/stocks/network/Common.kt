@@ -20,7 +20,7 @@ suspend fun requestAccessToken(processResponseBody: (AccessTokenResponseBody) ->
                 processResponseBody(body)
             }
         } else {
-            Log.d("MainActivity", "request failed")
+            Log.d("MainActivity", "request failed\n${response.raw()}")
             response.errorBody()
             throw Exception("Error getting access token : ${response.code()}")
         }
@@ -32,14 +32,14 @@ suspend fun checkAndUpdateAccessToken(tokenPrefs: SharedPreferences) {
     val tokenIssuedAt = tokenPrefs.getLong("tokenIssuedAt", 0)
     val tokenHasExpired = Calendar.getInstance().timeInMillis - tokenIssuedAt >= 86400000
 
-    Log.d("MainActivity", "tokenHasExpired: $tokenHasExpired")
+    Log.d("checkAndUpdateAccessToken", "tokenHasExpired: $tokenHasExpired")
     if(savedAccessToken == "" || tokenHasExpired) {
         requestAccessToken {
             tokenPrefs.edit().putString("accessToken", it.accessToken).apply()
             tokenPrefs.edit().putLong("tokenIssuedAt", Calendar.getInstance().timeInMillis).apply()
-            Log.d("MainActivity", "accessToken: ${it.accessToken}")
+            Log.d("checkAndUpdateAccessToken", "accessToken: ${it.accessToken}")
         }
     } else {
-        Log.d("MainActivity", "saved accessToken: ${savedAccessToken}")
+        Log.d("checkAndUpdateAccessToken", "saved accessToken: ${savedAccessToken}")
     }
 }
