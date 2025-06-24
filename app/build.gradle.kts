@@ -80,6 +80,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.livedata.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.savedstate)
 
+    implementation(libs.okhttp3)
+    implementation(libs.okhttp3.logging)
     // Retrofit2
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.gson)

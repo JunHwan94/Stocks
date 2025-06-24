@@ -8,6 +8,7 @@ import com.zzunapps.stocks.data.AccessTokenResponseBody
 import com.zzunapps.stocks.network.RetrofitClient.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.ResponseBody
 
 suspend fun requestAccessToken(processResponseBody: (AccessTokenResponseBody) -> Unit) {
     withContext(Dispatchers.IO) {
@@ -16,12 +17,13 @@ suspend fun requestAccessToken(processResponseBody: (AccessTokenResponseBody) ->
         if(response.isSuccessful) {
             val body = response.body()
             if(body != null) {
-                Log.d("MainActivity", "accessToken: ${response.body()?.accessToken}")
+                Log.d("requestAccessToken", "accessToken: ${response.body()?.accessToken}")
                 processResponseBody(body)
             }
         } else {
-            Log.d("MainActivity", "request failed\n${response.raw()}")
-            response.errorBody()
+            Log.d("requestAccessToken", "request failed\n${response.raw()}")
+            val errorBody = response.errorBody() as ResponseBody
+            Log.d("requestAccessToken", "${errorBody.string()}")
             throw Exception("Error getting access token : ${response.code()}")
         }
     }

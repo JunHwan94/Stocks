@@ -16,6 +16,6 @@ data class AccessTokenResponseBody(
     @SerialName("access_token") val accessToken: String,
     @SerialName("token_type") val tokenType: String,
     @SerialName("access_token_token_expired") val accessTokenExpired: String,
-    @SerialName("error_code") val errorCode: String,
-    @SerialName("error_description") val errorMessage: String
+    @SerialName("error_code") val errorCode: String = "",
+    @SerialName("error_description") val errorMessage: String = ""
 )

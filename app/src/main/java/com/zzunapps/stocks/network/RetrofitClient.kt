@@ -2,17 +2,34 @@ package com.zzunapps.stocks.network
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import kotlinx.serialization.json.Json
-import okhttp3.MediaType
+import okhttp3.MediaType.Companion.toMediaType // MediaType.get() 대신 toMediaType() 권장
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
 object RetrofitClient {
-//    private val json = Json { ignoreUnknownKeys = true }
+    // 로깅 인터셉터 추가
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY // 요청과 응답의 본문까지 상세히 로깅
+    }
+
+    // OkHttpClient에 인터셉터 추가
+    private val okHttpClient = OkHttpClient.Builder()
+        .addInterceptor(loggingInterceptor)
+        .build()
+
+    private val json = Json {
+        ignoreUnknownKeys = true
+        coerceInputValues = true
+        encodeDefaults = true
+        isLenient = true
+    }
+
     private val retrofit: Retrofit by lazy {
         Retrofit.Builder()
             .baseUrl("https://openapi.koreainvestment.com:9443/")
-//            .addConverterFactory(GsonConverterFactory.create())
-            .addConverterFactory(Json.asConverterFactory(MediaType.get("application/json")))
+            .addConverterFactory(json.asConverterFactory("application/json; charset=UTF-8".toMediaType()))
+            .client(okHttpClient)
             .build()
     }
     val service by lazy { retrofit.create(KISService::class.java) }
