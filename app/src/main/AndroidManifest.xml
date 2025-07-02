@@ -15,7 +15,7 @@
         android:theme="@style/Theme.Stocks"
         tools:targetApi="31">
         <receiver
-            android:name=".ui.widget.StocksWidgetReceiver"
+            android:name=".features.widget.presentation.ui.StocksWidgetReceiver"
             android:exported="true"
             android:label="Stocks">
 

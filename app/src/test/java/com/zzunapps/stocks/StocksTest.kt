@@ -1,10 +1,5 @@
 package com.zzunapps.stocks
 
-import com.zzunapps.stocks.ui.widget.WidgetWorker
-import kotlinx.coroutines.test.runTest
-import org.junit.Test
-
-import org.junit.Assert.*
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 

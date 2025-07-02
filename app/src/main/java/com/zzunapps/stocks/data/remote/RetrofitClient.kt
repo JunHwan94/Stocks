@@ -1,6 +1,8 @@
-package com.zzunapps.stocks.network
+package com.zzunapps.stocks.data.remote
 
 import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
+import com.zzunapps.stocks.data.remote.api.AuthService
+import com.zzunapps.stocks.features.widget.data.remote.api.StockService
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType // MediaType.get() 대신 toMediaType() 권장
 import okhttp3.OkHttpClient
@@ -32,5 +34,7 @@ object RetrofitClient {
             .client(okHttpClient)
             .build()
     }
-    val service by lazy { retrofit.create(KISService::class.java) }
+
+    val authService by lazy { retrofit.create(AuthService::class.java) }
+    val stockService by lazy {retrofit.create(StockService::class.java) }
 }

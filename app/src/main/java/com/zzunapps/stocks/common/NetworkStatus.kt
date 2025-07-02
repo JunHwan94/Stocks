@@ -1,4 +1,4 @@
-package com.zzunapps.stocks.network
+package com.zzunapps.stocks.common
 
 import android.content.Context
 import android.net.ConnectivityManager

@@ -1,4 +1,4 @@
-package com.zzunapps.stocks.data
+package com.zzunapps.stocks.features.widget.domain.model
 
 import kotlinx.serialization.Serializable
 

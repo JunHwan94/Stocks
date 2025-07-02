@@ -1,4 +1,4 @@
-package com.zzunapps.stocks.data
+package com.zzunapps.stocks.data.remote.dto
 
 import com.zzunapps.stocks.BuildConfig
 import kotlinx.serialization.SerialName

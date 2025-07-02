@@ -1,4 +1,4 @@
-package com.zzunapps.stocks.ui.widget
+package com.zzunapps.stocks.features.widget.presentation.ui
 
 import android.appwidget.AppWidgetManager
 import android.content.Context
@@ -9,6 +9,7 @@ import androidx.work.Data
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
+import com.zzunapps.stocks.features.widget.presentation.worker.WidgetWorker
 
 class StocksWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = StocksWidget()

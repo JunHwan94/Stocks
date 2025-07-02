@@ -13,8 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
-import com.zzunapps.stocks.network.NetworkStatus
-import com.zzunapps.stocks.network.checkAndUpdateAccessToken
+import com.zzunapps.stocks.common.NetworkStatus
+import com.zzunapps.stocks.data.remote.checkAndUpdateAccessToken
 import com.zzunapps.stocks.ui.theme.StocksTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

@@ -1,4 +1,4 @@
-package com.zzunapps.stocks.ui.widget
+package com.zzunapps.stocks.features.widget.presentation.worker
 
 import android.annotation.SuppressLint
 import android.appwidget.AppWidgetManager
@@ -11,18 +11,17 @@ import androidx.glance.appwidget.updateAll
 import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.zzunapps.stocks.BuildConfig
-import com.zzunapps.stocks.data.Constants.AUTHORIZATION
-import com.zzunapps.stocks.data.Constants.STOCK_ITEMS_JSON_KEY
-import com.zzunapps.stocks.data.Constants.TR_ID
+import com.zzunapps.stocks.common.Constants.STOCK_ITEMS_JSON_KEY
 import com.zzunapps.stocks.data.Data
-import com.zzunapps.stocks.data.StockItem
-import com.zzunapps.stocks.network.RetrofitClient
-import com.zzunapps.stocks.network.checkAndUpdateAccessToken
+import com.zzunapps.stocks.domain.usecase.CommonUseCase
+import com.zzunapps.stocks.features.widget.domain.model.StockItem
+import com.zzunapps.stocks.features.widget.domain.usecase.GetStockDetailUseCase
+import com.zzunapps.stocks.features.widget.presentation.ui.StocksWidget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 
+// todo : GetStockDetailUseCase, CommonUseCase 주입
 class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params){
     private val tokenPrefs = applicationContext.getSharedPreferences("token", Context.MODE_PRIVATE)
 
@@ -40,7 +39,7 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             return@withContext Result.failure()
         }
 
-        checkAndUpdateAccessToken(tokenPrefs)
+        CommonUseCase().checkAndUpdateAccessToken(tokenPrefs)
         try {
             val accessToken = applicationContext.getSharedPreferences("token", Context.MODE_PRIVATE).getString("accessToken", "") ?: ""
 
@@ -74,20 +73,7 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
     ): List<StockItem> {
         return withContext(Dispatchers.IO) {
             Data.stocks.map { pair ->
-                val response = RetrofitClient.service.getStockData(
-                    mapOf(
-                        CONTENT_TYPE_KV,
-                        AUTHORIZATION to "Bearer $accessToken",
-                        APP_KEY_KV,
-                        APP_SECRET_KV,
-                        TR_ID to "HHDFS76200200"
-                    ),
-                    mapOf(
-                        "AUTH" to "", // 빈 값으로 보내야 함
-                        "EXCD" to pair.first, // 거래소 코드 NAS, NYS...
-                        "SYMB" to pair.second, // 종목 코드 AAPL, TRMD
-                    )
-                )
+                val response = GetStockDetailUseCase().invoke(accessToken, pair)
                 if (response.isSuccessful) {
                     val body = response.body() ?: throw Exception("Empty response body")
                     val symbol = body.priceDetail.rsym
@@ -95,17 +81,10 @@ class WidgetWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                     Log.d("WidgetWorker", "symbol: $symbol, price: $price")
                     StockItem(symbol.drop(4), price.dropLast(2))
                 } else {
-                    response.errorBody()
-                    StockItem("", "")
+                    response.body()
                     throw Exception("Error getting overseas price : ${response.code()}")
                 }
             }
         }
-    }
-
-    private companion object {
-        private val CONTENT_TYPE_KV = "content-type" to "application/json; charset=utf-8"
-        private val APP_KEY_KV = "appkey" to BuildConfig.APP_KEY
-        private val APP_SECRET_KV = "appsecret" to BuildConfig.APP_SECRET
     }
 }

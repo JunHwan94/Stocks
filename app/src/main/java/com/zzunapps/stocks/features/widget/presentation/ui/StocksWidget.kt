@@ -1,4 +1,4 @@
-package com.zzunapps.stocks.ui.widget
+package com.zzunapps.stocks.features.widget.presentation.ui
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -30,8 +30,8 @@ import androidx.glance.state.PreferencesGlanceStateDefinition
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.zzunapps.stocks.R
-import com.zzunapps.stocks.data.Constants.STOCK_ITEMS_JSON_KEY
-import com.zzunapps.stocks.data.StockItem
+import com.zzunapps.stocks.common.Constants.STOCK_ITEMS_JSON_KEY
+import com.zzunapps.stocks.features.widget.domain.model.StockItem
 import kotlinx.serialization.json.Json
 
 class StocksWidget : GlanceAppWidget() {
@@ -60,7 +60,7 @@ fun WidgetContent() {
         } catch(e: Exception) {
             emptyList()
         }
-    } ?: emptyList()
+    }
 
     Scaffold(
         titleBar = {
